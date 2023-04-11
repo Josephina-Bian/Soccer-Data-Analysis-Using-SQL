@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/bianz/Desktop/European Soccer Project/database.sqlite" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="186"/><column_width id="1" width="0"/><column_width id="2" width="40"/><column_width id="3" width="27941"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,17:mainPlayer_Attributes"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="Country" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="42"/><column index="2" value="75"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="League" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort><column index="2" mode="0"/></sort><column_widths><column index="1" value="42"/><column index="2" value="100"/><column index="3" value="157"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Player" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="40"/><column index="2" value="95"/><column index="3" value="192"/><column index="4" value="124"/><column index="5" value="129"/><column index="6" value="49"/><column index="7" value="52"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="Player_Attributes" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="40"/><column index="2" value="124"/><column index="3" value="95"/><column index="4" value="129"/><column index="5" value="99"/><column index="6" value="66"/><column index="7" value="106"/><column index="8" value="145"/><column index="9" value="147"/><column index="10" value="62"/><column index="11" value="61"/><column index="12" value="126"/><column index="14" value="53"/><column index="15" value="63"/><column index="16" value="45"/><column index="17" value="134"/><column index="18" value="92"/><column index="19" value="84"/><column index="20" value="88"/><column index="21" value="93"/><column index="22" value="47"/><column index="23" value="69"/><column index="24" value="58"/><column index="25" value="86"/><column index="26" value="58"/><column index="27" value="59"/><column index="28" value="65"/><column index="29" value="79"/><column index="30" value="79"/><column index="31" value="94"/><column index="32" value="78"/><column index="33" value="45"/><column index="34" value="67"/><column index="35" value="59"/><column index="36" value="111"/><column index="37" value="95"/><column index="38" value="69"/><column index="39" value="85"/><column index="40" value="74"/><column index="41" value="101"/><column index="42" value="83"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1">-- Get list of Leagues and their Country:
+--(INNER) JOIN - keep only records that match the condition (after the ON) in both the tables, and records in both tables that do not match wouldn't appear in the output
+-- LEFT JOIN - keep all the values from the first (left) table - in conjunction with the matching rows from the right table. The columns from the right table, that don't have matching value in the left, would have NULL values.
+
+SELECT *
+FROM League
+JOIN Country ON Country.id = League.country_id;
+
+-- Get list of Teams in order
+
+SELECT *
+FROM Team
+ORDER BY team_long_name
+LIMIT 10;
+
+--- Get list of matches:
+
+SELECT Match.id, Country.name AS country_name, League.name AS league_name, 
+   season,stage, date,HT.team_long_name AS  home_team,
+   AT.team_long_name AS away_team,home_team_goal, away_team_goal                                
+FROM Match
+JOIN Country on Country.id = Match.country_id
+JOIN League on League.id = Match.league_id
+LEFT JOIN Team AS HT on HT.team_api_id = Match.home_team_api_id
+LEFT JOIN Team AS AT on AT.team_api_id = Match.away_team_api_id
+WHERE country_name = 'Spain'
+ORDER by date
+LIMIT 10;
+
+-- Do some Analysis:
+-- Grouping the data to different levels
+
+SELECT Country.name AS country_name,
+	League.name AS league_name,
+	season,
+	count(DISTINCT stage) AS number_of_stages,
+	count(DISTINCT HT.team_long_name) AS number_of_teams,
+	avg(home_team_goal) AS avg_home_team_scors, 
+	avg(away_team_goal) AS avg_away_team_goals, 
+    avg(home_team_goal-away_team_goal) AS avg_goal_dif, 
+    avg(home_team_goal+away_team_goal) AS avg_goals, 
+    sum(home_team_goal+away_team_goal) AS total_goals
+FROM Match
+JOIN Country ON Country.id = Match.country_id
+JOIN League ON League.id = Match.league_id
+LEFT JOIN Team AS HT on HT.team_api_id = Match.home_team_api_id
+LEFT JOIN Team AS AT on AT.team_api_id = Match.away_team_api_id
+WHERE country_name in ('Spain', 'Germany', 'France', 'Italy')
+GROUP BY Country.name, League.name, season
+HAVING count(distinct stage) &gt; 10
+ORDER BY Country.name, League.name, season DESC;
+
+-- NOTES for SQL:
+-- 1) Methods:
+---- SELECT
+---- FROM
+---- JOIN
+---- WHERE
+---- GROUP BY
+---- HAVING
+---- ORDER BY
+---- LIMIT
+-- 2) Usages:
+---- Define which tables to use, and connect them (FROM + JOIN)
+---- Keep only the rows that apply to the conditions (WHERE)
+---- Group the data by the required level (if need) (GROUP BY)
+---- Choose what information you want to have in the new table. It can have just rawdata (if no grouping), or combination of dimensions (from the grouping), and metrics Then, choose what to show from the table:
+---- Order the output of the new table (ORDER BY)
+---- Add more conditions that would filter the new created table (HAVING)
+---- Limit to number of rows - would cut it according the soring and the having filtering (LIMIT);
+
+-- Using subqueries:
+-- joining a table that holds players' basic details (name, height, weight) to a table that holds more attributes
+-- Difficulty: The first table holds one row for each player, while the key in the second table is player+season
+-- subquery (=a temp. table): group the attributes table to a different key -- player level only without season (using average);
+
+SELECT CASE
+	WHEN ROUND(height)&lt;165 then 165
+	WHEN ROUND(height)&gt;195 then 195
+	ELSE ROUND(height)
+	END AS calc_height,
+	COUNT(height) as distribution, AVG(PA_Grouped.avg_overall_rating) AS avg_overall_rating,
+	AVG(PA_Grouped.avg_potential) AS avg_potential,
+	AVG(weight) AS avg_weight
+FROM Player
+LEFT JOIN (SELECT Player_Attributes.player_api_id,
+				avg(Player_Attributes.overall_rating) AS avg_overall_rating,
+				avg(Player_Attributes.potential) AS avg_potential FROM Player_Attributes
+			GROUP BY Player_Attributes.player_api_id)
+			AS PA_Grouped ON PLAYER.player_api_id = PA_Grouped.player_api_id
+GROUP BY calc_height
+ORDER BY calc_height
+
+-- NOTES FOR SQL:
+-- 1) Conditional function: IF-statement is not supported, use &quot;CASE + WHEN + ELSE&quot; statement
+-- 2) ROUND
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</sql><current_tab id="0"/></tab_sql></sqlb_project>
